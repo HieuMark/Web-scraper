@@ -1,30 +1,25 @@
-async function autoScroll(page) { // for dynamic websites
-  await page.evaluate(async () => {
-    await new Promise(resolve => {
-      let attempt = 0;
-      const maxAttempts = 1000;
+async function autoScroll(page, duration_ms) {
+  let previousHeight = 0, newHeight, attempt = 0, timer = 0;
+  const maxAttempts = 20, start = Date.now();
 
-      const timer = setInterval(() => {
-        const currentHeight = document.body.scrollHeight;
-        window.scrollBy(0, 1000);
+  if (duration_ms === -1) duration_ms = Infinity;
 
-        setTimeout(() => {
-          const newHeight = document.body.scrollHeight;
+  while (timer <= duration_ms && attempt < maxAttempts) {
+    await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight));
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-          if (newHeight === currentHeight) {
-            attempt++;
-            if (attempt >= maxAttempts) {
-              clearInterval(timer);
-              resolve();
-            }
-          } else {
-            attempt = 0;
-          }
-        }, 150); // wait for DOM to update
-      }, 200);
-    });
-  });
-}
+    newHeight = await page.evaluate(() => document.body.scrollHeight);
+    
+    if (newHeight === previousHeight) {
+      attempt++;
+    } else {
+      attempt = 0;
+      previousHeight = newHeight;
+    }
+
+    timer = Date.now() - start;
+  }
+};
 
 const readline = require('readline');
 
@@ -39,3 +34,14 @@ function askQuestion(query) {
     resolve(ans);
   }));
 }
+
+const escapeCSV = val => `"${String(val).replaceAll('\n', ';').replace(/"/g, '""')}"`
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+module.exports = {
+  autoScroll,
+  askQuestion,
+  escapeCSV,
+  sleep
+};
