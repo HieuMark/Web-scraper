@@ -5,10 +5,11 @@ const mf = require("../Functions/My_functions");
     const dont_show_head = 'no' === await mf.askQuestion("Do you wanna see the browser? (yes/no) ");
     const browser = await puppeteer.launch({headless: dont_show_head});
     
-    await Promise.all(new Array(4).fill(null).map(() => browser.newPage())); // browser now has 5 tabs (1 default + 4 new)
-    let tabs = await browser.pages();
+    await Promise.all(new Array(9).fill(null).map(() => browser.newPage())); // browser now has 10 tabs (1 default + 9 new)
+    const tabs = await browser.pages();
 
-    const links = [
+    // Initialize 5 category links
+    let links = [
         "https://exquisette.com/product-category/bags/",
         "https://exquisette.com/product-category/jewelry/",
         "https://exquisette.com/product-category/shoes/",
@@ -16,21 +17,34 @@ const mf = require("../Functions/My_functions");
         "https://exquisette.com/product-category/clothes/"
     ];
 
-    const page_links = [];
+    // Get all page number links
+    links = (await Promise.all(links.map(async (link, i) => {
+        const tab = tabs[i];
+        await tab.goto(link, {waitUntil: "domcontentloaded"});
 
-    await Promise.all(tabs.map(async (tab, i) => {
-        await tab.goto(links[i], {waitUntil: "load"});
+        const max_page = parseInt(await tab.evaluate(() => [...document.body.querySelectorAll("a.page-number")].map(ele => ele.textContent.trim()).at(-2)), 10);
 
-        await tab.waitForSelector("a.page-number", {visible: true});
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        return Array.from({length: max_page}, (_, j) => `${link}page/${j + 1}/`);
+    }))).flat();
 
-        const max_page = parseInt(await tab.evaluate(() => [...document.querySelectorAll("a.page-number")].at(-1).textContent.trim()), 10);
-        
-        for (let j = 1; j <= max_page; j++) page_links.push(links[i] + `page/${j}/`)
-    }));
+    // Get all product links
+    const product_links = [];
+    let link_group;
+    while (links.length) {
+        link_group = Array.from({length: Math.min(10, links.length)}, () => links.pop());
 
-    console.log(page_links);
-    console.log(page_links.length);
+        await Promise.all(tabs.map(async (tab, i) => {
+            if (link_group.length <= i) return null;
+
+            await tab.goto(link_group[i], {waitUntil: "domcontentloaded"});
+
+            product_links.push(...new Set(await tab.evaluate(() => [...document.body.querySelectorAll("div.col-inner div div div a")]
+                .flatMap(ele => ele.getAttribute("href").startsWith("https://exquisette.com/") ? [ele.getAttribute("href")] : []))));
+        }));
+    }
+
+    console.log(product_links);
+    console.log(product_links.length);
 
     if (!dont_show_head) await mf.askQuestion("Press Enter to finish program.");
 
