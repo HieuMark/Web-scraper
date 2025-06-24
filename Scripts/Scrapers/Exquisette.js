@@ -1,5 +1,6 @@
 const puppeteer = require("../Puppeteer/node_modules/puppeteer");
 const mf = require("../Functions/My_functions");
+const fs = require("fs");
 
 (async function() {
     const dont_show_head = 'no' === await mf.askQuestion("Do you wanna see the browser? (yes/no) ");
@@ -21,30 +22,113 @@ const mf = require("../Functions/My_functions");
     links = (await Promise.all(links.map(async (link, i) => {
         const tab = tabs[i];
         await tab.goto(link, {waitUntil: "domcontentloaded"});
+        await tab.waitForSelector("a.page-number");
 
         const max_page = parseInt(await tab.evaluate(() => [...document.body.querySelectorAll("a.page-number")].map(ele => ele.textContent.trim()).at(-2)), 10);
 
         return Array.from({length: max_page}, (_, j) => `${link}page/${j + 1}/`);
     }))).flat();
 
+    let link_group;
+
     // Get all product links
     const product_links = [];
-    let link_group;
     while (links.length) {
         link_group = Array.from({length: Math.min(10, links.length)}, () => links.pop());
 
         await Promise.all(tabs.map(async (tab, i) => {
-            if (link_group.length <= i) return null;
+            if (link_group.length <= i) return;
 
+            const splitted_link = link_group[i].split('/'),
+                category = splitted_link.at(-4),
+                page = splitted_link.at(-2);
+            
             await tab.goto(link_group[i], {waitUntil: "domcontentloaded"});
+            await tab.waitForSelector("div.col-inner div div div a");
 
-            product_links.push(...new Set(await tab.evaluate(() => [...document.body.querySelectorAll("div.col-inner div div div a")]
-                .flatMap(ele => ele.getAttribute("href").startsWith("https://exquisette.com/") ? [ele.getAttribute("href")] : []))));
+            product_links.push(...new Set(
+                (await tab.evaluate(() => [...document.body.querySelectorAll("div.col-inner div div div a")]
+                    .flatMap(ele => ele.getAttribute("href").startsWith("https://exquisette.com/") ? [ele.getAttribute("href")] : [])))
+                    .map(lnk => lnk + '||' + category + '||' + page)
+            ));
         }));
     }
 
-    console.log(product_links);
-    console.log(product_links.length);
+    // Initialize an empty CSV
+    fs.writeFileSync(
+        "../../Data/Exquisette.csv",
+        "Product_name,Brand,Images,Original_price,Sale_price,SKU,Short_description,Short_description_img,Long_description,Category,Page,Source_link",
+        'utf-8'
+    );
+
+    // Record links that failed to load
+    fs.writeFileSync(
+        "../../Data/Failed_Exquisette.txt",
+        "Here are the product links from Exquisette that failed:",
+        'utf-8'
+    );
+
+    mf.rotateTabs(tabs, 500); // Some tabs need to be in front to fully load
+
+    // Go into each product link and scrape
+    while (product_links.length) {
+        link_group = Array.from({length: Math.min(10, product_links.length)}, () => product_links.pop());
+
+        await Promise.all(tabs.map(async (tab, i) => {
+            const [link, category, page] = link_group[i].split('||');
+
+            try {await tab.goto(link, {waitUntil: "domcontentloaded"})} catch (e1) {
+                console.error(e1.message, "- Attempt 1 failed, link:", link);
+                try {await tab.goto(link, {waitUntil: "networkidle2"})} catch (e2) {
+                    console.error(e2.message, "- Attempt 2 failed, link:", link);
+                    fs.appendFileSync("../../Data/Failed_Exquisette.txt", `\n${link}`, 'utf-8');
+                    return;
+                }
+            }
+
+            await tab.waitForSelector("div.flickity-slider"); // This element can only appear when set as front tab
+
+            const product_name = await tab.evaluate(() => {
+                try {return document.body.querySelector("h1.product-title.product_title.entry-title").textContent.trim()} catch (e) {
+                    console.error(e.message, "- Product name not found.");
+                    return '';
+                }
+            });
+
+            const brand = await tab.evaluate(() => {
+                try {return document.body.querySelector("div.pwb-single-product-brands.pwb-clearfix a").textContent.trim()} catch (e) {
+                    console.error(e.message, "- Brand not found.");
+                    return '';
+                }
+            });
+
+            const slider_imgs = await tab.evaluate(() => {
+                try {return [...document.body.querySelector("div.flickity-slider").querySelectorAll("div a img")].map(ele => ele.getAttribute("src"))} catch (e) {
+                    console.error(e.message, "- Can't find slider images.");
+                    return [];
+                }
+            });
+
+            const prices = await tab.evaluate(() => {
+                try {return [...document.body.querySelector("div.price-wrapper").querySelectorAll("span.woocommerce-Price-amount.amount bdi")].map(ele => ele.textContent.trim())} catch (e) {
+                    console.error(e.message, "- Prices not found.");
+                    return [];
+                }
+            });
+
+            const sku = await tab.evaluate(() => {
+                try {return document.body.querySelector("span.sku").textContent.trim()} catch (e) {
+                    console.error(e.message, "- SKU not found.");
+                    return '';
+                }
+            });
+
+            console.log(sku);
+        }));
+    }
+
+    //console.log(product_links);
+    //console.log(product_links.length);
 
     if (!dont_show_head) await mf.askQuestion("Press Enter to finish program.");
 
