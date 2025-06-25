@@ -4,6 +4,7 @@ const fs = require("fs");
 
 (async function() {
     const dont_show_head = 'no' === await mf.askQuestion("Do you wanna see the browser? (yes/no) ");
+
     const browser = await puppeteer.launch({headless: dont_show_head});
     
     await Promise.all(new Array(9).fill(null).map(() => browser.newPage())); // browser now has 10 tabs (1 default + 9 new)
@@ -76,6 +77,8 @@ const fs = require("fs");
         link_group = Array.from({length: Math.min(10, product_links.length)}, () => product_links.pop());
 
         await Promise.all(tabs.map(async (tab, i) => {
+            if (link_group.length <= i) return;
+            
             const [link, category, page] = link_group[i].split('||');
 
             try {await tab.goto(link, {waitUntil: "domcontentloaded"})} catch (e1) {
@@ -155,8 +158,8 @@ const fs = require("fs");
                     product_name,
                     brand,
                     slider_imgs.join(';'),
-                    '$' + prices.length ? prices[0] : '',
-                    '$' + prices.length === 2 ? prices[1] : '',
+                    prices.length ? prices[0] : '',
+                    prices.length === 2 ? prices[1] : '',
                     sku,
                     short_des,
                     short_img,
