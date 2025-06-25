@@ -70,6 +70,7 @@ const fs = require("fs");
 
     mf.rotateTabs(tabs, 500); // Some tabs need to be in front to fully load
 
+    let link_done = 0; // Keep track of how many links have been scraped
     // Go into each product link and scrape
     while (product_links.length) {
         link_group = Array.from({length: Math.min(10, product_links.length)}, () => product_links.pop());
@@ -123,12 +124,55 @@ const fs = require("fs");
                 }
             });
 
-            console.log(sku);
-        }));
-    }
+            const [short_des, short_img] = await tab.evaluate(() => {
+                const short_des_ele = document.body.querySelector("div.product-short-description");
+                let des = '', img = '';
+                try {
+                    des = [...short_des_ele.children]
+                        .map(ele => ele.textContent.replace(/<img[^>]*>/g, '').replaceAll('\n', ';').trim())
+                        .filter(Boolean)
+                        .join(';');
+                } catch (e) {console.error(e.message, "- No short description.")}
+                try {img = short_des_ele.querySelector("img").getAttribute("data-src")} catch (e) {console.error(e.message, "- No image in short description.")}
+                return [des, img];
+            });
 
-    //console.log(product_links);
-    //console.log(product_links.length);
+            const long_des = await tab.evaluate(() => {
+                try {
+                    return [...document.body.querySelector("div.woocommerce-Tabs-panel woocommerce-Tabs-panel--description panel entry-content active".replaceAll(' ', '.')).children]
+                        .map(child => child.tagName === "UL" ? [...child.children].map(el => el.textContent.trim()).join(';') : child.textContent.trim())
+                        .join(';');
+                } catch (e) {
+                    console.error(e.message, "- No long description.");
+                    return '';
+                }
+            });
+
+            //Product_name,Brand,Images,Original_price,Sale_price,SKU,Short_description,Short_description_img,Long_description,Category,Page,Source_link
+            fs.appendFileSync(
+                "../../Data/Exquisette.csv",
+                '\n' + [
+                    product_name,
+                    brand,
+                    slider_imgs.join(';'),
+                    '$' + prices.length ? prices[0] : '',
+                    '$' + prices.length === 2 ? prices[1] : '',
+                    sku,
+                    short_des,
+                    short_img,
+                    long_des,
+                    category,
+                    page,
+                    link
+                ].map(mf.escapeCSV).join(),
+                'utf-8'
+            )
+
+            link_done++;
+        }));
+
+        console.log(`Progress: ${link_done} links finished.`);
+    }
 
     if (!dont_show_head) await mf.askQuestion("Press Enter to finish program.");
 

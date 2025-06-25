@@ -1,2 +1,3 @@
 .Rproj.user
 Data/*
+!Data/.gitkeep
