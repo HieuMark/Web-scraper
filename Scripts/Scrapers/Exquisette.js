@@ -69,7 +69,7 @@ const fs = require("fs");
         'utf-8'
     );
 
-    mf.rotateTabs(tabs, 500); // Some tabs need to be in front to fully load
+    const tab_rotator = mf.rotateTabs(tabs, 500); // Some tabs need to be in front to fully load
 
     let link_done = 0; // Keep track of how many links have been scraped
     // Go into each product link and scrape
@@ -178,6 +178,8 @@ const fs = require("fs");
     }
 
     if (!dont_show_head) await mf.askQuestion("Press Enter to finish program.");
+
+    clearInterval(tab_rotator);
 
     await browser.close();
 })();

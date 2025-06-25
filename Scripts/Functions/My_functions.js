@@ -41,12 +41,12 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function rotateTabs(tab_list, cycle_time = 500) {
   let i = -1;
-  setInterval(() => {
-      try {
-          i = (i + 1) % tab_list.length;
-          tab_list[i].bringToFront();
-      } catch (e) {console.error(e.message, "- Can't switch tab.")}
+  const intervalID = setInterval(() => {
+    i = (i + 1) % tab_list.length;
+    tab_list[i].bringToFront();
   }, cycle_time);
+
+  return intervalID;
 }
 
 module.exports = {
