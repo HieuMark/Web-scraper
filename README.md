@@ -2,25 +2,23 @@
 
 Scripts/
 
-├─ Data\_readers
+├─ Data_readers
 
-&nbsp;	└─ Read\_data.R
+    └─ Read_data.R
 
 ├─ Puppeteer
 
 ├─ Scrapers
 
-&nbsp;	├─ Exquisette.js
+    ├─ Exquisette.js
 
-&nbsp;	└─ Kay\_Fashion.js
+    └─ Kay_Fashion.js
 
 └─ Functions
 
-&nbsp;	└─ My\_functions.js
+    └─ My_functions.js
 
 Data/
-
-
 
 # Preparations:
 
@@ -28,7 +26,7 @@ I used Visual Studio Code to run these codes, make sure to have Node.js installe
 
 In your Command Prompt, set your directory as the `Puppeteer` folder, then type `npm install puppeteer`.
 
-`Read\_data.R` is run in RStudio. If you want to use a different way to check the data, that's also fine.
+`Read_data.R` is run in RStudio. If you want to use a different way to check the data, that's also fine.
 
 All data scraped will be located in `Data` folder.
 
