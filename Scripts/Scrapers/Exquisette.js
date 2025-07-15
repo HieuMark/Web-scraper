@@ -58,7 +58,7 @@ const fs = require("fs");
     // Initialize an empty CSV
     fs.writeFileSync(
         "../../Data/Exquisette.csv",
-        "Product_name,Brand,Images,Original_price,Sale_price,SKU,Short_description,Short_description_img,Long_description,Category,Page,Source_link",
+        "Product_name,Brand,Images,Original_price,Sale_price,SKU,Short_description,Short_description_img,Long_description,Category,Tags,Page,Source_link",
         'utf-8'
     );
 
@@ -140,6 +140,10 @@ const fs = require("fs");
                 return [des, img];
             });
 
+            const tags = await tab.evaluate(() =>
+                [...document.body.querySelector("span.tagged_as").querySelectorAll("a")].map(ele => ele.textContent.trim())
+            );
+
             const long_des = await tab.evaluate(() => {
                 try {
                     return [...document.body.querySelector("div.woocommerce-Tabs-panel woocommerce-Tabs-panel--description panel entry-content active".replaceAll(' ', '.')).children]
@@ -151,7 +155,7 @@ const fs = require("fs");
                 }
             });
 
-            //Product_name,Brand,Images,Original_price,Sale_price,SKU,Short_description,Short_description_img,Long_description,Category,Page,Source_link
+            //Product_name,Brand,Images,Original_price,Sale_price,SKU,Short_description,Short_description_img,Long_description,Category,Tags,Page,Source_link
             fs.appendFileSync(
                 "../../Data/Exquisette.csv",
                 '\n' + [
@@ -165,6 +169,7 @@ const fs = require("fs");
                     short_img,
                     long_des,
                     category,
+                    tags.join(', '),
                     page,
                     link
                 ].map(mf.escapeCSV).join(),
