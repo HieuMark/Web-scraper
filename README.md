@@ -6,6 +6,8 @@ Scripts/
 
     └─ Read_data.R
 
+├─ Save_out_data
+
 ├─ Puppeteer
 
 ├─ Scrapers
@@ -30,7 +32,7 @@ In your Command Prompt, set your directory as the `Puppeteer` folder, then type 
 
 All data scraped will be located in `Data` folder.
 
-
+`Save_out_data` folder is there to save different versions of scraped data.
 
 ### License: MIT
 
