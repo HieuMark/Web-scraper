@@ -92,71 +92,54 @@ const fs = require("fs");
 
             await tab.waitForSelector("div.flickity-slider"); // This element can only appear when set as front tab
 
-            const product_name = await tab.evaluate(() => {
-                try {return document.body.querySelector("h1.product-title.product_title.entry-title").textContent.trim()} catch (e) {
-                    console.error(e.message, "- Product name not found.");
-                    return '';
-                }
-            });
+            let product_name = '';
+            try {product_name = await tab.evaluate(() => document.body.querySelector("h1.product-title.product_title.entry-title").textContent.trim())} catch (e) {
+                console.error(e.message, "- Product name not found. |", link);
+            }
 
-            const brand = await tab.evaluate(() => {
-                try {return document.body.querySelector("div.pwb-single-product-brands.pwb-clearfix a").textContent.trim()} catch (e) {
-                    console.error(e.message, "- Brand not found.");
-                    return '';
-                }
-            });
+            let brand = '';
+            try {brand = await tab.evaluate(() => document.body.querySelector("div.pwb-single-product-brands.pwb-clearfix a").textContent.trim())} catch (e) {
+                console.error(e.message, "- Brand not found. |", link);
+            }
 
-            const slider_imgs = await tab.evaluate(() => {
-                try {return [...document.body.querySelector("div.flickity-slider").querySelectorAll("div a img")].map(ele => ele.getAttribute("src"))} catch (e) {
-                    console.error(e.message, "- Can't find slider images.");
-                    return [];
-                }
-            });
+            let slider_imgs = [];
+            try {slider_imgs = await tab.evaluate(() => [...document.body.querySelector("div.flickity-slider").querySelectorAll("div a img")].map(ele => ele.getAttribute("src")))} catch (e) {
+                console.error(e.message, "- Can't find slider images. |", link);
+            }
 
-            const prices = await tab.evaluate(() => {
-                try {return [...document.body.querySelector("div.price-wrapper").querySelectorAll("span.woocommerce-Price-amount.amount bdi")].map(ele => ele.textContent.trim())} catch (e) {
-                    console.error(e.message, "- Prices not found.");
-                    return [];
-                }
-            });
+            let prices = [];
+            try {prices = await tab.evaluate(() => [...document.body.querySelector("div.price-wrapper").querySelectorAll("span.woocommerce-Price-amount.amount bdi")].map(ele => ele.textContent.trim()))} catch (e) {
+                console.error(e.message, "- Prices not found. |", link);
+            }
 
-            const sku = await tab.evaluate(() => {
-                try {return document.body.querySelector("span.sku").textContent.trim()} catch (e) {
-                    console.error(e.message, "- SKU not found.");
-                    return '';
-                }
-            });
+            let sku = '';
+            try {sku = await tab.evaluate(() => document.body.querySelector("span.sku").textContent.trim())} catch (e) {
+                console.error(e.message, "- SKU not found. |", link);
+            }
 
-            const [short_des, short_img] = await tab.evaluate(() => {
-                const short_des_ele = document.body.querySelector("div.product-short-description");
-                let des = '', img = '';
-                try {
-                    des = [...short_des_ele.children]
-                        .map(ele => ele.textContent.replace(/<img[^>]*>/g, '').replaceAll('\n', ';').trim())
-                        .filter(Boolean)
-                        .join(';');
-                } catch (e) {console.error(e.message, "- No short description.")}
-                try {img = short_des_ele.querySelector("img").getAttribute("data-src")} catch (e) {console.error(e.message, "- No image in short description.")}
-                return [des, img];
-            });
+            let short_des = '', short_img = '';
+            try {
+                short_des = await tab.evaluate(() => [...document.body.querySelector("div.product-short-description").children]
+                    .map(ele => ele.textContent.replace(/<img[^>]*>/g, '').replaceAll('\n', ';').trim())
+                    .filter(Boolean)
+                    .join(';')
+                )
+            } catch (e) {console.error(e.message, "- No short description. |", link)}
+            try {short_img = await tab.evaluate(() => document.body.querySelector("div.product-short-description").querySelector("img").getAttribute("data-src"))} catch (e) {
+                console.error(e.message, "- No image in short description. |", link);
+            }
 
-            const tags = await tab.evaluate(() => {
-                try {return [...document.body.querySelector("span.tagged_as").querySelectorAll("a")].map(ele => ele.textContent.trim())} catch (e) {
-                    console.error(e.message, "- Tags not found.");
-                    return [];
-                }
-            });
+            let tags = [];
+            try {tags = await tab.evaluate(() => [...document.body.querySelector("span.tagged_as").querySelectorAll("a")].map(ele => ele.textContent.trim()))} catch (e) {
+                console.error(e.message, "- Tags not found. |", link);
+            }
 
-            const long_des = await tab.evaluate(() => {
-                try {
-                    return [...document.body.querySelector("div.woocommerce-Tabs-panel woocommerce-Tabs-panel--description panel entry-content active".replaceAll(' ', '.')).children]
-                        .map(child => child.tagName === "UL" ? [...child.children].map(el => el.textContent.trim()).join(';') : child.textContent.trim())
-                        .join(';');
-                } catch (e) {
-                    console.error(e.message, "- No long description.");
-                    return '';
-                }
-            });
+            let long_des = '';
+            try {long_des = await tab.evaluate(() =>
+                [...document.body.querySelector("div.woocommerce-Tabs-panel woocommerce-Tabs-panel--description panel entry-content active".replaceAll(' ', '.')).children]
+                    .map(child => child.tagName === "UL" ? [...child.children].map(el => el.textContent.trim()).join(';') : child.textContent.trim())
+                    .join(';')
+            )} catch (e) {console.error(e.message, "- No long description. |", link)}
 
             //Product_name,Brand,Images,Original_price,Sale_price,SKU,Short_description,Short_description_img,Long_description,Category,Tags,Page,Source_link
             fs.appendFileSync(
