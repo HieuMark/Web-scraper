@@ -140,9 +140,12 @@ const fs = require("fs");
                 return [des, img];
             });
 
-            const tags = await tab.evaluate(() =>
-                [...document.body.querySelector("span.tagged_as").querySelectorAll("a")].map(ele => ele.textContent.trim())
-            );
+            const tags = await tab.evaluate(() => {
+                try {return [...document.body.querySelector("span.tagged_as").querySelectorAll("a")].map(ele => ele.textContent.trim())} catch (e) {
+                    console.error(e.message, "- Tags not found.");
+                    return [];
+                }
+            });
 
             const long_des = await tab.evaluate(() => {
                 try {
